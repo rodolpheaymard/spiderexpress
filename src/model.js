@@ -3,7 +3,8 @@ const fs = require('fs');
 
 //const datamodelpath = './functions/data/datamodel.json';
 //const datamodelpath = './src/data/datamodel.json';
-const datamodelpath = './dist/data/datamodel.json';
+//const datamodelpath = './dist/data/datamodel.json';
+const datamodelpath = './data/datamodel.json';
 
 
 class Model 
