@@ -6,7 +6,8 @@ const Model = require('./model');
 const mymodel = new Model();
 
 router.get("/", (req, res) => {
-       res.json(" This data server is working for you ");
+      let result = mymodel.ping();
+      res.json(result);
    });
 
 

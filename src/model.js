@@ -50,14 +50,20 @@ class Model
     this.datamodel = { objects : [] };
 
     // let's start wih a few users,  at least an admin !
-    this.datamodel.objects.push({ "id":"user-0","type":"user",
+    this.datamodel.objects.push({ "id":"user-0","type":"user","deleted":false,
                                   "username":"admin","password":"admin2","isadmin":true});
-    this.datamodel.objects.push({ "id":"user-1","type":"user",
+    this.datamodel.objects.push({ "id":"user-1","type":"user","deleted":false,
                                   "username":"camille","password":"camille","isadmin":false});
-    this.datamodel.objects.push({ "id":"user-2","type":"user",
+    this.datamodel.objects.push({ "id":"user-2","type":"user","deleted":false,
                                   "username":"iris","password":"iris","isadmin":false});
 
     this.save();
+  }
+
+  ping()
+  {
+     let result = "spider express server is available for " + this.getObjects("user").length + " users.";
+     return result;
   }
 
   login(username, password)
