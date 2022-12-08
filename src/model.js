@@ -22,7 +22,6 @@ class Model
       console.log('An error has occurred while loading ', error);
     }
   }
-
   
   ensureDirectoryExistence(filePath) 
   {
@@ -72,7 +71,7 @@ class Model
     let result = false;
     let message = "login not found"; 
     this.datamodel.objects.forEach(element => {
-      if (element.type === "user")
+      if (element.type === "user" && element.deleted === false)
       {
         if (element.username === username )
         {
@@ -121,7 +120,16 @@ class Model
       if (element.type === objtype 
           && element.deleted === false)
       {
-        result.push(element);
+        if (element.type === "user")
+        {
+          // special case for users :  we do not give password ...
+          result.push({ "id" : element.id , "type" : element.type, "deleted" : element.deleted,
+                        "username" : element.username , "isadmin" : element.isadmin });    
+        }
+        else
+        {
+          result.push(element);    
+        }
       }
     });
 
