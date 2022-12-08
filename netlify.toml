@@ -1,2 +1,10 @@
 [build]
  functions = "functions"
+
+ [context.dev.environment]
+  NODE_ENV = "development"
+  port = 9003
+
+[dev]
+  targetPort = 3013
+  port = 9001

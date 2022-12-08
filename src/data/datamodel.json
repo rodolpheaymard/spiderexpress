@@ -1,0 +1,4 @@
+{"objects":[{"id":"usr0","type":"user","username":"admin","password":"admin2","isadmin":true},
+{"id":"usr1","type":"user","username":"camille","password":"camille","isadmin":false},
+{"id":"usr2","type":"user","username":"iris","password":"iris","isadmin":false}
+]}
