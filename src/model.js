@@ -139,7 +139,7 @@ class Model
     return result;
   }
 
-  getObjects()
+  getAllObjects()
   {
     let result = [];
 
@@ -152,7 +152,7 @@ class Model
       }
       else
       {
-        result.push(element);    
+        result.push(element);
       }
     
     });

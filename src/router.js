@@ -16,8 +16,8 @@ router.get("/login/:username/:password", (req,res)=>{
     res.json(result);
 }
 )
-router.get("/all", (req,res)=>{
-  let result = mymodel.getObjects();
+router.get("/allobjects", (req,res)=>{
+  let result = mymodel.getAllObjects();
   res.json(result);
 })
 
