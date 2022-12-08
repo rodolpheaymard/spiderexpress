@@ -16,6 +16,11 @@ router.get("/login/:username/:password", (req,res)=>{
     res.json(result);
 }
 )
+router.get("/all", (req,res)=>{
+  let result = mymodel.getObjects();
+  res.json(result);
+})
+
 router.get("/all/:objecttype", (req,res)=>{
   let result = mymodel.getObjects(req.params.objecttype);
   res.json(result);
