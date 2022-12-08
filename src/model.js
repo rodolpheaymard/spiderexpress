@@ -175,10 +175,10 @@ class Model
   removeObject(id)
   {
     this.datamodel.objects.forEach(element => {
-    if (element.id === id )
-    {
-      element.deleted = true;
-    }
+      if (element.id === id )
+      {
+        element.deleted = true;
+      }
     });
   }
 
