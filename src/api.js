@@ -13,5 +13,4 @@ app.use(bodyParser.json());
 
 app.use('/.netlify/functions/api', router);
 
-
 export const handler = serverless(app);

@@ -15,6 +15,11 @@ class Model
       {
         const data = fs.readFileSync(datamodelpath);
         this.datamodel = JSON.parse(data);  
+
+        if (this.datamodel.objects === null || this.datamodel.object === undefined)
+        {
+          this.initModel();
+        }
       }
       else
       {
@@ -38,9 +43,10 @@ class Model
   save()
   {
     try {    
+      this.datamodel.lastsave = new Date();
       this.ensureDirectoryExistence(datamodelpath);
       fs.writeFileSync(datamodelpath, JSON.stringify(this.datamodel), 'utf8');
-      console.log('Data successfully saved to disk');
+      // console.log('Data successfully saved to disk');
     } catch (error) {
       console.log('An error has occurred while saving', error);
     }  
@@ -161,6 +167,10 @@ class Model
     return result;
   }
 
+  getFullDatabase()
+  { 
+    return this.datamodel;
+  }
 
   removeObject(id)
   {
