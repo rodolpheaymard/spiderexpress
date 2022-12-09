@@ -14,7 +14,8 @@ class AwsModel
   constructor() 
   {
     this.datamodel = { objects : [] , loaded : false, lastmodif : null};
-    
+    this.awsdatatablename = "spider_data";
+
     try {
        this.init_aws();
        this.load_all();
@@ -28,8 +29,8 @@ class AwsModel
     this.awsConfig = {
       "region" :"us-east-1",
       "endpoint"  : "http://dynamodb.us-east-1.amazonaws.com",
-      "accessKeyId" : "AKIAXDVH7GI3FJTH565X",
-      "secretAccessKey" : "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"
+   //   "accessKeyId" : "",
+   //   "secretAccessKey" : ""
     };
 
     AWS.config.update(this.awsConfig);
@@ -41,7 +42,7 @@ class AwsModel
     let docClient = new AWS.DynamoDB.DocumentClient();
     
     var params = {
-      TableName : "spider_data",
+      TableName : this.awsdatatablename,
       Key : { spider_id : id }
     };
   
@@ -61,12 +62,10 @@ class AwsModel
     let docClient = new AWS.DynamoDB.DocumentClient();
     
     docClient.scan({
-      TableName: "spider_data",
+      TableName: this.awsdatatablename,
     })
     .promise()
     .then(data => {
-      console.log(data.Items);
-
       // this.datamodel.lastmodif = ;
       data.Items.forEach( itm => {
         
@@ -83,63 +82,71 @@ class AwsModel
     .catch(console.error)
 
 
-/**   var params = {
-      ExpressionAttributeValues: {
-        ':i': 2,
-        ':e': 9,
-        ':topic': 'PHRASE'
-      },
-    KeyConditionExpression: 'spider_id begins_with(form)',
-    FilterExpression: '',
-    TableName: 'spider_data'
-    };
+  //  docClient.scan({
+  //  TableName: "my-table",
+  //  FilterExpression:
+  //    "attribute_not_exists(deletedAt) AND contains(firstName, :firstName)",
+   // ExpressionAttributeValues: {
+   //   ":firstName": "John",
+   // },
+  //})
+  //.promise()
+  //.then(data => console.log(data.Items))
+  //.catch(console.error)
+  
+  }
 
-    docClient.query(params, function(err, data) {
-      if (err) {
-        console.log("aws error", err);
-      } else {
-        console.log("aws success", data.Items);
+
+
+  extract_content(obj)  {
+    let duplicatedobj = { ...obj};
+    delete duplicatedobj.id;
+    delete duplicatedobj.type;
+    delete duplicatedobj.deleted;
+    let result = JSON .stringify(duplicatedobj);
+   
+    return result;
+  }
+
+  get_timestamp()
+  {
+    let dt = new Date();
+    return dt.toISOString();
+  }
+
+  save_object(obj, mode)
+  {
+    try {    
+      this.datamodel.lastmodif = new Date();
+      let docClient = new AWS.DynamoDB.DocumentClient();     
+
+      let timestamp = this.get_timestamp();
+      switch(mode) {
+        case "create" : 
+          docClient.put({   Item: { spider_id: obj.id,
+                                     spider_type: obj.type,
+                                     spider_deleted: obj.deleted,
+                                     spider_created_date: timestamp,
+                                     spider_modified_date: timestamp,
+                                     spider_deleted_date: "",
+                                     spider_content: this.extract_content(obj),
+                                    },
+                                    TableName: this.awsdatatablename,
+                            })
+                            .promise()
+                            .then(data => console.log(data.Attributes))
+                            .catch(console.error);                            
+        break;
+        case "update" : 
+        break;
+        case "delete" : 
+        break;
       }
-  }); */
-  }
 
-
-  save_all()
-  {
-    try {    
-      this.datamodel.lastmodif = new Date();
-
-       // write modified ata to aws
 
     } catch (error) {
       console.log('An error has occurred while saving', error);
     }  
-  }
-
-  save_object(obj)
-  {
-    try {    
-      this.datamodel.lastmodif = new Date();
-       // write modified ata to aws
-
-    } catch (error) {
-      console.log('An error has occurred while saving', error);
-    }  
-  }
-
-  initFirstTimeModel()
-  {
-    this.datamodel = { objects : [] };
-
-    // let's start wih a few users,  at least an admin !
-    this.datamodel.objects.push({ "id":"user-0","type":"user","deleted":false,
-                                  "username":"admin","password":"admin2","isadmin":true});
-    this.datamodel.objects.push({ "id":"user-1","type":"user","deleted":false,
-                                  "username":"camille","password":"camille","isadmin":false});
-    this.datamodel.objects.push({ "id":"user-2","type":"user","deleted":false,
-                                  "username":"iris","password":"iris","isadmin":false});
-
-    this.save_all();
   }
 
   ping()
@@ -186,7 +193,7 @@ class AwsModel
     obj.type = objtype;
     obj.deleted = false;
     this.datamodel.objects.push(obj);
-    this.save_object(obj);
+    this.save_object(obj,"create");
 
     return obj;
   }
@@ -254,8 +261,9 @@ class AwsModel
       {
         if ( element.deleted !== true)
         {
-          element.deleted = true;
-          this.save_object(element);
+          element.deleted = true;      
+
+          this.save_object(element,"delete");
         }
       }
     });
