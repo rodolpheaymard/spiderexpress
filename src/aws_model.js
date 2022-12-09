@@ -1,59 +1,133 @@
-const path = require('path');
-const fs = require('fs');
-
-//const datamodelpath = './functions/data/datamodel.json';
-//const datamodelpath = './src/data/datamodel.json';
-//const datamodelpath = './dist/data/datamodel.json';
-const datamodelpath = './data/datamodel.json';
+const AWS = require("aws-sdk");
 
 
-class Model 
+
+
+
+
+
+
+
+
+class AwsModel 
 {
   constructor() 
   {
+    this.datamodel = { objects : [] , loaded : false, lastmodif : null};
+    
     try {
-      if (fs.existsSync(datamodelpath) === true)
-      {
-        const data = fs.readFileSync(datamodelpath);
-        this.datamodel = JSON.parse(data);  
-
-        if (this.datamodel.objects === null || this.datamodel.object === undefined)
-        {
-          this.initModel();
-        }
-      }
-      else
-      {
-        this.initModel();
-      }                      
+       this.init_aws();
+       this.load_all();
     } catch (error) {
       console.log('An error has occurred while loading ', error);
     }
   }
   
-  ensureDirectoryExistence(filePath) 
+  init_aws()
   {
-    var dirname = path.dirname(filePath);
-    if (fs.existsSync(dirname)) {
-      return true;
-    }
-    this.ensureDirectoryExistence(dirname);
-    fs.mkdirSync(dirname);
+    this.awsConfig = {
+      "region" :"us-east-1",
+      "endpoint"  : "http://dynamodb.us-east-1.amazonaws.com",
+      "accessKeyId" : "AKIAXDVH7GI3FJTH565X",
+      "secretAccessKey" : "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"
+    };
+
+    AWS.config.update(this.awsConfig);
+    console.log("aws init ok ");
   }
 
-  save()
+  load_object(id)
+  {
+    let docClient = new AWS.DynamoDB.DocumentClient();
+    
+    var params = {
+      TableName : "spider_data",
+      Key : { spider_id : id }
+    };
+  
+    console.log("aws loading data ");
+    docClient.get(params, function (err,data) {
+      if (err) {
+        console.log("aws error : "+ JSON.stringify(err,null, 2));
+      } else {
+        console.log("aws success : "+ JSON.stringify(data,null, 2));    
+      }
+  
+    });    
+  }
+  
+  load_all()
+  {
+    let docClient = new AWS.DynamoDB.DocumentClient();
+    
+    docClient.scan({
+      TableName: "spider_data",
+    })
+    .promise()
+    .then(data => {
+      console.log(data.Items);
+
+      // this.datamodel.lastmodif = ;
+      data.Items.forEach( itm => {
+        
+        let obj = {id : itm.spider_id, type : itm.spider_type, deleted : itm.spider_deleted } ;
+        let content = JSON.parse(itm.spider_content);
+        let fullobj = { ...obj, ...content };
+
+        this.datamodel.objects.push(fullobj);
+        console.log( " obj :   " + JSON.stringify(fullobj));
+      });      
+
+      this.datamodel.loaded = true;   
+    })
+    .catch(console.error)
+
+
+/**   var params = {
+      ExpressionAttributeValues: {
+        ':i': 2,
+        ':e': 9,
+        ':topic': 'PHRASE'
+      },
+    KeyConditionExpression: 'spider_id begins_with(form)',
+    FilterExpression: '',
+    TableName: 'spider_data'
+    };
+
+    docClient.query(params, function(err, data) {
+      if (err) {
+        console.log("aws error", err);
+      } else {
+        console.log("aws success", data.Items);
+      }
+  }); */
+  }
+
+
+  save_all()
   {
     try {    
-      this.datamodel.lastsave = new Date();
-      this.ensureDirectoryExistence(datamodelpath);
-      fs.writeFileSync(datamodelpath, JSON.stringify(this.datamodel), 'utf8');
-      // console.log('Data successfully saved to disk');
+      this.datamodel.lastmodif = new Date();
+
+       // write modified ata to aws
+
     } catch (error) {
       console.log('An error has occurred while saving', error);
     }  
   }
 
-  initModel()
+  save_object(obj)
+  {
+    try {    
+      this.datamodel.lastmodif = new Date();
+       // write modified ata to aws
+
+    } catch (error) {
+      console.log('An error has occurred while saving', error);
+    }  
+  }
+
+  initFirstTimeModel()
   {
     this.datamodel = { objects : [] };
 
@@ -65,7 +139,7 @@ class Model
     this.datamodel.objects.push({ "id":"user-2","type":"user","deleted":false,
                                   "username":"iris","password":"iris","isadmin":false});
 
-    this.save();
+    this.save_all();
   }
 
   ping()
@@ -112,7 +186,7 @@ class Model
     obj.type = objtype;
     obj.deleted = false;
     this.datamodel.objects.push(obj);
-    this.save();
+    this.save_object(obj);
 
     return obj;
   }
@@ -178,7 +252,11 @@ class Model
     this.datamodel.objects.forEach(element => {
       if (element.id === id )
       {
-        element.deleted = true;
+        if ( element.deleted !== true)
+        {
+          element.deleted = true;
+          this.save_object(element);
+        }
       }
     });
   }
@@ -186,6 +264,6 @@ class Model
 
 }
 
-module.exports = Model;
+module.exports = AwsModel;
 
 

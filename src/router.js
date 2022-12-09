@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
-const Model = require('./model');
+const AwsModel = require('./aws_model');
 
-const mymodel = new Model();
+const mymodel = new AwsModel();
 
 router.get("/", (req, res) => {
       let result = mymodel.ping();
