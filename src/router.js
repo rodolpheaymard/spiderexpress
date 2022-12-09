@@ -61,14 +61,9 @@ router.post('/remove/:objectid', (req, res) => {
   mymodel.removeObject(req.params.objectid);
   res.json(newobj);
   });  
-      
-  router.get("/fulldatabase", (req,res)=>{
-    let result = mymodel.getFullDatabase();
-    res.json(result);
-  })
   
 router.use((req, res) => {
-            res.status(404);
+            res.status(404);<
             res.json({
                 error: "API not found"
             });
