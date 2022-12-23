@@ -1,109 +1,80 @@
-const AWS = require("aws-sdk");
+const fs = require("fs");
 
 
-class AwsModel 
+class FsModel 
 {
   constructor() 
   {
     this.datamodel = { objects : [] , loaded : false, lastmodif : null};
-    this.awsdatatablename = "spider_data_" + process.env.NODE_ENV;
-  
-    console.log( this.awsdatatablename );
+    this.datadirname = "./data/" +  process.env.NODE_ENV.trim() + "/"; 
 
-    try {
-       this.init_aws();
+    try 
+    {       
        this.load_all();
     } 
     catch (error) {
       console.log('An error has occurred while loading ', error);
     }
   }
-  
-  init_aws()
-  {        
-    this.test_credentials();
-    this.awsConfig = {
-      "region" :"us-east-1",
-      // "endpoint"  : "http://dynamodb.us-east-1.amazonaws.com",
-    };
-    AWS.config.update(this.awsConfig);
-    console.log("aws init ok ");
-  }
 
-  test_credentials()
-  {        
-    console.log("testing aws credentials");
-    AWS.config.getCredentials(function(err) {
-      if (err) {
-        console.log(err.stack);
-        // credentials not loaded
-      }
-      else {
-        console.log("Access key:", AWS.config.credentials.accessKeyId);
-      }
-    });
-  }
 
   load_object(id)
   {
-    let docClient = new AWS.DynamoDB.DocumentClient();
-    
-    var params = {
-      TableName : this.awsdatatablename,
-      Key : { spider_id : id }
-    };
-  
-    console.log("aws loading data ");
-    docClient.get(params, function (err,data) {
+    console.log("loading loading data ["+this.datadirname+"]");
+
+    let ficname = this.datadirname + id + ".json";
+    this.load_file(ficname);
+  }
+
+
+  load_file(ficname)
+  {
+    let mdl = this;
+    fs.readFile(ficname, 'utf8', function(err, data){
+
       if (err) {
-        console.log("aws error : "+ JSON.stringify(err,null, 2));
-      } else {
-        console.log("aws success : "+ JSON.stringify(data,null, 2));    
-      }
-  
-    });    
+        console.log('Unable to scan directory: ' + err);
+        return;
+       } 
+         
+      let objData = JSON.parse(data);
+      mdl.datamodel.objects.push(objData);
+    });  
   }
   
   load_all()
   {
-    let docClient = new AWS.DynamoDB.DocumentClient();
-    
-    docClient.scan({
-      TableName: this.awsdatatablename,
-    })
-    .promise()
-    .then(data => {
-      // this.datamodel.lastmodif = ;
-      data.Items.forEach( itm => {
-        
-        let obj = {id : itm.spider_id, type : itm.spider_type, deleted : itm.spider_deleted } ;
-        let content = JSON.parse(itm.spider_content);
-        let fullobj = { ...obj, ...content };
+    console.log("loading loading data ["+this.datadirname+"]");
 
-        this.datamodel.objects.push(fullobj);
-        console.log( " obj :   " + JSON.stringify(fullobj));
-      });      
+    const mdl = this;
+    fs.readdir(this.datadirname, function (err, strfiles) {
+      if (err) {
+          return console.log('Unable to scan directory: ' + err);
+      } 
 
-      this.datamodel.loaded = true;   
-    })
-    .catch(console.error)
+      if (strfiles.length == 0)
+      {
+        console.log("no data found on server , launch init");
+        mdl.startup_data();
+        return;
+      }
 
-
-  //  docClient.scan({
-  //  TableName: "my-table",
-  //  FilterExpression:
-  //    "attribute_not_exists(deletedAt) AND contains(firstName, :firstName)",
-   // ExpressionAttributeValues: {
-   //   ":firstName": "John",
-   // },
-  //})
-  //.promise()
-  //.then(data => console.log(data.Items))
-  //.catch(console.error)
-  
+      strfiles.forEach(function (datafile) {          
+        mdl.load_file(mdl.datadirname + datafile);
+      });
+    });
   }
 
-
+  startup_data()
+  {
+    let usr1 = { "username" : "admin" , "password" : "admin2" , "isadmin" : true};
+    let usr2 = { "username" : "camille" , "password" : "camille" , "isadmin" : false};
+    let usr3 = { "username" : "iris" , "password" : "iris" , "isadmin" : false};
+    
+    this.addObject(usr1,"user");
+    this.addObject(usr2,"user");
+    this.addObject(usr3,"user");
+  }
 
   extract_content(obj)  {
     let duplicatedobj = { ...obj};
@@ -125,32 +96,47 @@ class AwsModel
   {
     try {    
       this.datamodel.lastmodif = new Date();
-      let docClient = new AWS.DynamoDB.DocumentClient();     
-
       let timestamp = this.get_timestamp();
+      let tosave = false;
       switch(mode) {
         case "create" : 
-          docClient.put({   Item: { spider_id: obj.id,
-                                     spider_type: obj.type,
-                                     spider_deleted: obj.deleted,
-                                     spider_created_date: timestamp,
-                                     spider_modified_date: timestamp,
-                                     spider_deleted_date: "",
-                                     spider_content: this.extract_content(obj),
-                                    },
-                                    TableName: this.awsdatatablename,
-                            })
-                            .promise()
-                            .then(data => console.log(data.Attributes))
-                            .catch(console.error);                            
+        obj.spider_created_date = timestamp;
+        obj.spider_modified_date = timestamp;
+        obj.spider_deleted_date = "";
+        obj.deleted = false;
+        tosave = true;
         break;
         case "update" : 
+        obj.spider_modified_date = timestamp;
+        obj.spider_deleted_date = "";
+        obj.deleted = false;
+        tosave = true;
         break;
         case "delete" : 
+        obj.spider_deleted_date = timestamp;
+        obj.deleted = true;
+        tosave = true;
         break;
       }
 
-
+      if (tosave === true)
+      {
+        let content = JSON.stringify(obj);
+        let filename = this.datadirname + obj.id + ".json";
+        fs.writeFile(filename, content,
+                      {
+                        encoding: "utf8",
+                        flag: "w",
+                        mode: 0o666
+                      },
+                      (err) => {
+                        if (err)
+                          console.log(err);
+                        else {
+                         // console.log("File " + filename+ " saved successfully");
+                        }
+                    });
+      }
     } catch (error) {
       console.log('An error has occurred while saving', error);
     }  
@@ -279,6 +265,6 @@ class AwsModel
 
 }
 
-module.exports = AwsModel;
+module.exports = FsModel;
 
 

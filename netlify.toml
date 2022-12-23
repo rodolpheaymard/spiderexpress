@@ -1,6 +1,0 @@
-[build]
- functions = "functions"
-
-[context.dev.environment]
- NODE_ENV = "development"
-
